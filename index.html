@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CodeCity — your codebase as a 3D city</title>
+  <meta name="description" content="Turn any GitHub repo or local folder into an explorable 3D city. Folders are districts, files are buildings.">
+  <meta property="og:title" content="CodeCity — your codebase as a 3D city">
+  <meta property="og:description" content="Paste a GitHub repo or drop a folder. Every file becomes a building.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='3' y='14' width='7' height='15' fill='%233b82f6'/><rect x='12' y='5' width='8' height='24' fill='%23f1e05a'/><rect x='22' y='10' width='7' height='19' fill='%23f34b7d'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body class="landing">
+  <canvas id="scene"></canvas>
+
+  <header id="topbar">
+    <button class="brand" id="brand" title="Back to start">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="14" width="7" height="15" fill="#3b82f6"/><rect x="12" y="5" width="8" height="24" fill="#f1e05a"/><rect x="22" y="10" width="7" height="19" fill="#f34b7d"/></svg>
+      CodeCity
+    </button>
+    <form id="bar-form" class="repo-form compact">
+      <input id="bar-input" placeholder="owner/repo or GitHub URL" autocomplete="off" spellcheck="false">
+      <button type="submit">Build</button>
+    </form>
+  </header>
+
+  <section id="hero">
+    <div class="eyebrow">Codebase → 3D city</div>
+    <h1>Your code,<br>as a city.</h1>
+    <p class="lede">Every folder is a district. Every file is a building: taller means more lines, color means language.</p>
+    <form id="hero-form" class="repo-form">
+      <input id="hero-input" placeholder="Paste a GitHub repo, e.g. facebook/react" autocomplete="off" spellcheck="false">
+      <button type="submit">Build my city</button>
+    </form>
+    <div class="examples">
+      <span>Try</span>
+      <button data-repo="facebook/react">React</button>
+      <button data-repo="microsoft/vscode">VS Code</button>
+      <button data-repo="torvalds/linux">Linux</button>
+      <button data-repo="python/cpython">CPython</button>
+      <button data-repo="vercel/next.js">Next.js</button>
+    </div>
+    <div class="local">
+      Or <button id="hero-folder" class="link">open a folder</button>, <button id="hero-zip" class="link">upload a .zip</button>, or drop one anywhere.
+      <span class="muted">Local files never leave your computer.</span>
+    </div>
+    <details class="token">
+      <summary>Private repo or hitting limits? Use a GitHub token</summary>
+      <input id="token-input" type="password" placeholder="github_pat_… (read-only is enough)" autocomplete="off">
+      <small>Kept only in this browser tab and sent only to api.github.com.</small>
+    </details>
+  </section>
+
+  <aside id="panel" hidden>
+    <div class="panel-head">
+      <div>
+        <h2 id="city-name"></h2>
+        <div id="city-meta" class="muted"></div>
+      </div>
+      <button id="panel-toggle" class="icon" title="Collapse panel">–</button>
+    </div>
+    <div class="panel-body">
+      <div class="stats" id="stats"></div>
+      <div class="search">
+        <input id="search" placeholder="Find a file…" autocomplete="off" spellcheck="false">
+        <ul id="search-results"></ul>
+      </div>
+      <div class="legend-head"><h3 id="legend-title">Languages</h3><span class="muted" id="legend-hint">click to isolate</span></div>
+      <ul id="legend"></ul>
+      <div class="actions">
+        <button id="btn-fly">Fly-through</button>
+        <button id="btn-theme">Day mode</button>
+        <button id="btn-heat">Change hotspots</button>
+        <button id="btn-share">Copy share link</button>
+      </div>
+      <div class="record">
+        <select id="rec-aspect" title="Video shape">
+          <option value="1080x1350">4:5 · LinkedIn feed</option>
+          <option value="1080x1080">1:1 · Square</option>
+          <option value="1080x1920">9:16 · Vertical</option>
+          <option value="1920x1080">16:9 · Landscape</option>
+        </select>
+        <button id="btn-record" class="primary">● Record video</button>
+      </div>
+      <div class="actions secondary">
+        <button id="btn-export">Export for Blender</button>
+        <button id="btn-new">New city</button>
+      </div>
+      <div id="rate" class="muted"></div>
+    </div>
+  </aside>
+
+  <div id="selection" hidden>
+    <button class="icon close" id="sel-close" title="Close">×</button>
+    <div class="sel-lang"><span class="swatch" id="sel-swatch"></span><span id="sel-lang"></span></div>
+    <div id="sel-name" class="sel-name"></div>
+    <div id="sel-path" class="muted sel-path"></div>
+    <div id="sel-stats" class="sel-stats"></div>
+    <a id="sel-open" target="_blank" rel="noopener">Open file on GitHub ↗</a>
+  </div>
+
+  <div id="tooltip" hidden></div>
+  <div id="progress" hidden><div class="spinner"></div><span id="progress-text">Loading…</span></div>
+  <div id="drop-overlay" hidden><div>Drop a folder or .zip to build its city</div></div>
+  <div id="toast" hidden></div>
+  <div id="hint">Drag to orbit · Scroll to zoom · Right-drag to pan · Click a building</div>
+  <div id="rec-indicator" hidden><span class="dot"></span> Recording <span id="rec-time">0:00</span> · Esc to cancel</div>
+
+  <input type="file" id="folder-input" webkitdirectory multiple hidden>
+  <input type="file" id="zip-input" accept=".zip,application/zip" hidden>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
